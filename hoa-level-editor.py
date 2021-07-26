@@ -1,8 +1,6 @@
-# Hero of Aeboria Level Editor, version 0.1.1
-
-# changelog: adds ability to scroll left and right and ability to add new
-# terrain blocks by pressing the mouse and "a" key
-
+# Hero of Aeboria Level Editor, version 0.1.2
+# changelog: adds ability to delete blocks by pressing mouse and "d" key,
+# also makes starting block immune to deletion and adds concealable user instructions
 
 # import modules
 import sys
@@ -30,6 +28,15 @@ class Game:
         self.clock = pygame.time.Clock()
         self.background = True
         self.terrain_corners = []
+
+        # instructions:
+        self.instruction_1 = "To add a block, press the 'a' key and click a desired corner for a new terrain block,"
+        self.instruction_2 = "     then do so again for the opposite corner. A block will then be added."
+        self.instruction_3 = "To remove a block which has already been added, press the 'd' key and click the block."
+        self.instruction_4 = "The blocks are constructed based on the list of corners. To clear the list, press 'c'."
+        self.instruction_5 = "Press 'h' to hide these instructions."
+        self.hide_instructions = False
+
         self.new_game()
 
     def new_game(self):
@@ -37,16 +44,15 @@ class Game:
         self.all_sprites = pygame.sprite.Group()
         self.terrain = pygame.sprite.Group()
         self.not_hero = pygame.sprite.Group()
+        self.unkillable = pygame.sprite.Group()
 
         # initialize background
         self.background = pygame.Surface((window_x_size, window_y_size))
         background_color = (100, 100, 100)
         self.background.fill(background_color)
 
-        self.font = pygame.font.SysFont("cambria.ttf", 20)
-
-        # add text feedback holder
-        self.text_surface = True
+        self.font_big = pygame.font.SysFont("cambria.ttf", 35)
+        self.font_small = pygame.font.SysFont("cambria.ttf", 25)
 
         terrain_list = [(-200, 384, 250, 40),]    # starting ground
         for terrain_tuple in terrain_list:
@@ -57,6 +63,7 @@ class Game:
             terrain_piece = TerrainElement(x_val, y_val, w_val, h_val)
             self.all_sprites.add(terrain_piece)
             self.terrain.add(terrain_piece)
+            self.unkillable.add(terrain_piece)
 
         self.run()
 
@@ -92,16 +99,24 @@ class Game:
             if len(self.terrain_corners) < 2:
                 if mouse_position not in self.terrain_corners:
                     self.terrain_corners.append(mouse_position)
-            # else:
-            #     if mouse_position not in self.terrain_corners:
-            #         del self.terrain_corners[0]
-            #         self.terrain_corners.append(mouse_position)
 
         # clear terrain corners list
         if keys[K_c]:
             self.terrain_corners = []
 
-        # add new terrain block
+        # delete block if pressing mouse and "d" key
+        if keys[K_d] and mouse_down:
+            for terrain_piece in self.terrain:
+                if terrain_piece.rect.collidepoint(mouse_position):
+                    if terrain_piece not in self.unkillable:
+                        terrain_piece.kill()
+
+        if keys[K_h]:
+            self.hide_instructions = True
+
+        # end of user input
+
+        # add new terrain block if applicable
         if len(self.terrain_corners) == 2:
             # find which mouse point is the left one
             if self.terrain_corners[1][0] < self.terrain_corners[0][0]:
@@ -115,18 +130,39 @@ class Game:
             else:
                 top_index, bottom_index = 0, 1
 
+            # get x, y, width, and height values
             x_val = self.terrain_corners[left_index][0]
             y_val = self.terrain_corners[bottom_index][1]
             w_val = self.terrain_corners[right_index][0] - self.terrain_corners[left_index][0]
             h_val = self.terrain_corners[bottom_index][1] - self.terrain_corners[top_index][1]
 
+            # create new terrain piece and add it to relevant sprite groups
             terrain_piece = TerrainElement(x_val, y_val, w_val, h_val)
             self.all_sprites.add(terrain_piece)
             self.terrain.add(terrain_piece)
+
+            # reset terrain_corners
             self.terrain_corners = []
 
-        text_surface = self.font.render(str(self.terrain_corners), True, (0, 0, 0))
-        self.screen.blit(text_surface, (40, 50))
+        # show a text indicator of the terrain corner list
+        text_surface = self.font_big.render(str(self.terrain_corners), True, (0, 0, 0))
+        self.screen.blit(text_surface, (1200, 50))
+
+        # show a text indicator of the basic instructions, if user has not hidden it
+        if not self.hide_instructions:
+            # create the instruction surfaces
+            instructions_surface_1 = self.font_small.render(self.instruction_1, True, (0, 0, 0))
+            instructions_surface_2 = self.font_small.render(self.instruction_2, True, (0, 0, 0))
+            instructions_surface_3 = self.font_small.render(self.instruction_3, True, (0, 0, 0))
+            instructions_surface_4 = self.font_small.render(self.instruction_4, True, (0, 0, 0))
+            instructions_surface_5 = self.font_small.render(self.instruction_5, True, (0, 0, 0))
+
+            # blit the instruction surfaces
+            self.screen.blit(instructions_surface_1, (20, 30))
+            self.screen.blit(instructions_surface_2, (20, 55))
+            self.screen.blit(instructions_surface_3, (20, 80))
+            self.screen.blit(instructions_surface_4, (20, 105))
+            self.screen.blit(instructions_surface_5, (20, 130))
 
         self.all_sprites.update()
         self.all_sprites.draw(self.screen)
@@ -136,11 +172,6 @@ class Game:
         for event in pygame.event.get():
             if event.type == QUIT:
                 sys.exit()
-            # elif event.type == MOUSEBUTTONDOWN:
-            #     self.first_sound.play()
-
-
-
 
 
 class TerrainElement(pygame.sprite.Sprite):
@@ -169,13 +200,5 @@ class TerrainElement(pygame.sprite.Sprite):
     def update(self):
         self.rect.midbottom = self.position
 
-
-
-
-# format for stage block dictionaries:
-# name, [course object 1, course object 2, course object ...., course object x],
-# [enemy 1, enemy 2, enemy ..., enemy x]
-# types:
-# str, list of TerrainElements
 
 game = Game()
