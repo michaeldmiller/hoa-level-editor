@@ -1,12 +1,12 @@
-# Hero of Aeboria Level Editor, version 0.1.2
-# changelog: adds ability to delete blocks by pressing mouse and "d" key,
-# also makes starting block immune to deletion and adds concealable user instructions
+# Hero of Aeboria Level Editor, version 0.1.3
+# changelog: adds ability to save an output file with the "s" key, which contains all
+# of the terrain blocks in the editor written in the format used by Hero of Aeboria.
+# This update is the first functional build of the level editor.
 
 # import modules
 import sys
 import pygame
 from pygame.locals import *
-import os
 vec = pygame.math.Vector2
 
 window_x_size = 1366
@@ -28,6 +28,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.background = True
         self.terrain_corners = []
+        self.time_since_save = 0
 
         # instructions:
         self.instruction_1 = "To add a block, press the 'a' key and click a desired corner for a new terrain block,"
@@ -54,16 +55,21 @@ class Game:
         self.font_big = pygame.font.SysFont("cambria.ttf", 35)
         self.font_small = pygame.font.SysFont("cambria.ttf", 25)
 
-        terrain_list = [(-200, 384, 250, 40),]    # starting ground
-        for terrain_tuple in terrain_list:
-            x_val = terrain_tuple[0]
-            y_val = terrain_tuple[1]
-            w_val = terrain_tuple[2]
-            h_val = terrain_tuple[3]
-            terrain_piece = TerrainElement(x_val, y_val, w_val, h_val)
-            self.all_sprites.add(terrain_piece)
-            self.terrain.add(terrain_piece)
-            self.unkillable.add(terrain_piece)
+        # terrain_list = [(-200, 384, 200, 40),]    # starting ground
+        # for terrain_tuple in terrain_list:
+        #     x_val = terrain_tuple[0]
+        #     y_val = terrain_tuple[1]
+        #     w_val = terrain_tuple[2]
+        #     h_val = terrain_tuple[3]
+        #     terrain_piece = TerrainElement(x_val, y_val, w_val, h_val)
+        #     self.all_sprites.add(terrain_piece)
+        #     self.terrain.add(terrain_piece)
+        #     self.unkillable.add(terrain_piece)
+
+        self.starter_platform = TerrainElement(-200, 384, 200, 40)
+        self.all_sprites.add(self.starter_platform)
+        self.terrain.add(self.starter_platform)
+        self.unkillable.add(self.starter_platform)
 
         self.run()
 
@@ -75,6 +81,7 @@ class Game:
 
     def update(self):
         self.screen.blit(self.background, (0, 0))
+        self.time_since_save += 1
 
         # get key presses
         keys = pygame.key.get_pressed()
@@ -111,8 +118,13 @@ class Game:
                     if terrain_piece not in self.unkillable:
                         terrain_piece.kill()
 
+        # hide instructions if key is h
         if keys[K_h]:
             self.hide_instructions = True
+
+        # save file if key is s
+        if keys[K_s]:
+            self.save_file()
 
         # end of user input
 
@@ -172,6 +184,40 @@ class Game:
         for event in pygame.event.get():
             if event.type == QUIT:
                 sys.exit()
+
+    def save_file(self):
+        """Get relative positions of all added terrain blocks and save to output file"""
+
+        # find offset
+        # offset is calculated by determining relevant x distance from the right edge
+        # of the starter block, which was originally at zero. Calculating offset allows
+        # for saving at any point, regardless of how much the user has shifted the terrain
+        # blocks by moving the "camera" with left and right
+
+        if self.time_since_save > 120:
+            # set up starting variables
+            offset = self.starter_platform.rect.right
+            block_list = []
+            output_file = open("terrain_design.txt", "w")
+
+            # get all terrain block characteristics
+            for output_block in self.terrain:
+                block_x, block_y = str(output_block.rect.x - offset), str(output_block.rect.y + output_block.rect.height)
+                block_w, block_h = str(output_block.rect.width), str(output_block.rect.height)
+                block_list.append([block_x, block_y, block_w, block_h])
+
+            # write to file
+            for block in block_list:
+                out_line = "("
+                first_three_count = 0
+                while first_three_count < 3:
+                    out_line += block[first_three_count] + ", "
+                    first_three_count += 1
+                out_line += block[3] + "),\n"
+                output_file.write(out_line)
+
+            # reset time since save
+            self.time_since_save = 0
 
 
 class TerrainElement(pygame.sprite.Sprite):
