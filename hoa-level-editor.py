@@ -1,9 +1,9 @@
-# Hero of Aeboria Level Editor, version 0.1.3
-# changelog: adds ability to save an output file with the "s" key, which contains all
-# of the terrain blocks in the editor written in the format used by Hero of Aeboria.
-# This update is the first functional build of the level editor.
+# Hero of Aeboria Level Editor, version 0.1.4
+# changelog: output file will now sort blocks by starting x value, ascending. Instructions
+# about saving have also been added.
 
 # import modules
+import operator
 import sys
 import pygame
 from pygame.locals import *
@@ -35,7 +35,8 @@ class Game:
         self.instruction_2 = "     then do so again for the opposite corner. A block will then be added."
         self.instruction_3 = "To remove a block which has already been added, press the 'd' key and click the block."
         self.instruction_4 = "The blocks are constructed based on the list of corners. To clear the list, press 'c'."
-        self.instruction_5 = "Press 'h' to hide these instructions."
+        self.instruction_5 = "To save your creation to a file, press 's'. This will overwrite any previous file."
+        self.instruction_6 = "Press 'h' to hide these instructions."
         self.hide_instructions = False
 
         self.new_game()
@@ -55,7 +56,13 @@ class Game:
         self.font_big = pygame.font.SysFont("cambria.ttf", 35)
         self.font_small = pygame.font.SysFont("cambria.ttf", 25)
 
-        # terrain_list = [(-200, 384, 200, 40),]    # starting ground
+        self.starter_platform = TerrainElement(-200, 384, 200, 40)
+        self.all_sprites.add(self.starter_platform)
+        self.terrain.add(self.starter_platform)
+        self.unkillable.add(self.starter_platform)
+
+        # optional code to add previously generated terrain
+        # terrain_list = []
         # for terrain_tuple in terrain_list:
         #     x_val = terrain_tuple[0]
         #     y_val = terrain_tuple[1]
@@ -64,12 +71,6 @@ class Game:
         #     terrain_piece = TerrainElement(x_val, y_val, w_val, h_val)
         #     self.all_sprites.add(terrain_piece)
         #     self.terrain.add(terrain_piece)
-        #     self.unkillable.add(terrain_piece)
-
-        self.starter_platform = TerrainElement(-200, 384, 200, 40)
-        self.all_sprites.add(self.starter_platform)
-        self.terrain.add(self.starter_platform)
-        self.unkillable.add(self.starter_platform)
 
         self.run()
 
@@ -168,6 +169,7 @@ class Game:
             instructions_surface_3 = self.font_small.render(self.instruction_3, True, (0, 0, 0))
             instructions_surface_4 = self.font_small.render(self.instruction_4, True, (0, 0, 0))
             instructions_surface_5 = self.font_small.render(self.instruction_5, True, (0, 0, 0))
+            instructions_surface_6 = self.font_small.render(self.instruction_6, True, (0, 0, 0))
 
             # blit the instruction surfaces
             self.screen.blit(instructions_surface_1, (20, 30))
@@ -175,6 +177,7 @@ class Game:
             self.screen.blit(instructions_surface_3, (20, 80))
             self.screen.blit(instructions_surface_4, (20, 105))
             self.screen.blit(instructions_surface_5, (20, 130))
+            self.screen.blit(instructions_surface_6, (20, 155))
 
         self.all_sprites.update()
         self.all_sprites.draw(self.screen)
@@ -205,6 +208,10 @@ class Game:
                 block_x, block_y = str(output_block.rect.x - offset), str(output_block.rect.y + output_block.rect.height)
                 block_w, block_h = str(output_block.rect.width), str(output_block.rect.height)
                 block_list.append([block_x, block_y, block_w, block_h])
+
+            # sort block list by x value
+            # block_list.sort(key=lambda x: x[0])
+            block_list = sorted(block_list, key=lambda x: int(x[0]))
 
             # write to file
             for block in block_list:
@@ -245,6 +252,10 @@ class TerrainElement(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.midbottom = self.position
+
+
+def x_sort(entry):
+    return entry[0]
 
 
 game = Game()
